@@ -33,7 +33,7 @@ var (
 	ErrFailedSigning  = errors.New("failed generating signature")
 )
 
-// Verify verifies a secp256k1 signature was given an *ecdsa.PublicKey.
+// Verify verifies a secp256k1 signature given an *ecdsa.PublicKey.
 func (sm *SigningMethod) Verify(signingString, signature string, key interface{}) error {
 	pubKey, ok := key.(*ecdsa.PublicKey)
 	if !ok {
@@ -41,18 +41,14 @@ func (sm *SigningMethod) Verify(signingString, signature string, key interface{}
 	}
 	pub := crypto.FromECDSAPub(pubKey)
 
-	signingBytes, err := jwt.DecodeSegment(signingString)
-	if err != nil {
-		return err
-	}
-
 	sig, err := jwt.DecodeSegment(signature)
 	if err != nil {
 		return err
 	}
-	hash := crypto.Keccak256(signingBytes)
 
-	if !crypto.VerifySignature(pub, hash, sig) {
+	hash := crypto.Keccak256([]byte(signingString))
+
+	if !crypto.VerifySignature(pub, hash, sig[:64]) {
 		return ErrVerification
 	}
 
@@ -66,11 +62,7 @@ func (sm *SigningMethod) Sign(signingString string, key interface{}) (string, er
 		return "", ErrWrongKeyFormat
 	}
 
-	signingBytes, err := jwt.DecodeSegment(signingString)
-	if err != nil {
-		return "", err
-	}
-	hash := crypto.Keccak256(signingBytes)
+	hash := crypto.Keccak256([]byte(signingString))
 
 	sig, err := crypto.Sign(hash, prv)
 	if err != nil {
