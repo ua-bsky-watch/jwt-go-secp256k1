@@ -5,10 +5,14 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"errors"
+	"math/big"
 
 	"github.com/dgrijalva/jwt-go"
 	ecrypto "github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 )
+
+var curve = secp256k1.S256()
 
 // All the different instances of the algorithm. e.g. uport uses SigningMethodES256K1R
 var (
@@ -85,7 +89,14 @@ func (sm *SigningMethodSecp256K1) Verify(signingString, signature string, key in
 		return ErrVerification
 	}
 
-	if !ecrypto.VerifySignature(pub, hasher.Sum(nil), rs) {
+	// normalizes the signature to a "low s" form if necessary.
+	x, y := curve.Unmarshal(rs)
+	bi := new(big.Int)
+	if bi.Neg(y).Cmp(y) > 0 {
+		y = bi
+	}
+
+	if !ecrypto.VerifySignature(pub, hasher.Sum(nil), curve.Marshal(x, y)) {
 		return ErrVerification
 	}
 
