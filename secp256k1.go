@@ -9,10 +9,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	ecrypto "github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 )
-
-var curve = secp256k1.S256()
 
 // All the different instances of the algorithm. e.g. uport uses SigningMethodES256K1R
 var (
@@ -24,7 +21,6 @@ var (
 type SigningMethodSecp256K1 struct {
 	alg      string
 	h        crypto.Hash
-	toRS     toRS
 	toOutSig toOutSig
 }
 
@@ -39,7 +35,6 @@ func init() {
 	SigningMethodES256K1 = &SigningMethodSecp256K1{
 		alg:      "ES256K",
 		h:        crypto.SHA256,
-		toRS:     toRSES256K,
 		toOutSig: toES256K,
 	}
 	jwt.RegisterSigningMethod(SigningMethodES256K1.Alg(), func() jwt.SigningMethod {
@@ -49,7 +44,6 @@ func init() {
 	SigningMethodES256K1R = &SigningMethodSecp256K1{
 		alg:      "ES256K-R",
 		h:        crypto.SHA256,
-		toRS:     toRSES256KR,
 		toOutSig: toES256KR,
 	}
 	jwt.RegisterSigningMethod(SigningMethodES256K1R.Alg(), func() jwt.SigningMethod {
@@ -67,11 +61,10 @@ var (
 
 // Verify verifies a secp256k1 signature given an *ecdsa.PublicKey.
 func (sm *SigningMethodSecp256K1) Verify(signingString, signature string, key interface{}) error {
-	pubKey, ok := key.(*ecdsa.PublicKey)
+	pub, ok := key.(*ecdsa.PublicKey)
 	if !ok {
 		return ErrWrongKeyFormat
 	}
-	pub := ecrypto.FromECDSAPub(pubKey)
 
 	if !sm.h.Available() {
 		return ErrHashUnavailable
@@ -84,19 +77,10 @@ func (sm *SigningMethodSecp256K1) Verify(signingString, signature string, key in
 		return err
 	}
 
-	rs, err := sm.toRS(sig)
-	if err != nil {
-		return ErrVerification
-	}
+	bir := new(big.Int).SetBytes(sig[:32])
+	bis := new(big.Int).SetBytes(sig[32:64])
 
-	// normalizes the signature to a "low s" form if necessary.
-	x, y := curve.Unmarshal(rs)
-	bi := new(big.Int)
-	if bi.Neg(y).Cmp(y) > 0 {
-		y = bi
-	}
-
-	if !ecrypto.VerifySignature(pub, hasher.Sum(nil), curve.Marshal(x, y)) {
+	if !ecdsa.Verify(pub, hasher.Sum(nil), bir, bis) {
 		return ErrVerification
 	}
 
@@ -138,18 +122,10 @@ func toES256KR(sig []byte) []byte {
 	return sig
 }
 
-func toRSES256K(sig []byte) ([]byte, error) {
-	if len(sig) != 64 {
-		return nil, ErrVerification
-	}
-
-	return sig, nil
+func toRSES256K(sig []byte) []byte {
+	return sig[:64]
 }
 
-func toRSES256KR(sig []byte) ([]byte, error) {
-	if len(sig) != 65 {
-		return nil, ErrVerification
-	}
-
-	return sig[:64], nil
+func toRSES256KR(sig []byte) []byte {
+	return sig[:65]
 }
