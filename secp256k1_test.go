@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"testing"
 
-	secp256k1 "github.com/ureeves/jwt-go-secp256k1"
+	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/ethereum/go-ethereum/crypto"
+	secp256k1 "github.com/ureeves/jwt-go-secp256k1"
 )
 
 func TestVerification(t *testing.T) {
@@ -23,7 +23,7 @@ func TestVerification(t *testing.T) {
 
 		for _, sString := range ES256K_Data {
 			_, err = jwt.Parse(sString, func(token *jwt.Token) (interface{}, error) {
-				if _, ok := token.Method.(*secp256k1.SigningMethodSecp256K1); !ok {
+				if _, ok := token.Method.(*secp256k1.SigningMethodSecp256k1); !ok {
 					return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 				}
 
@@ -45,7 +45,7 @@ func TestVerification(t *testing.T) {
 
 		for _, sString := range ES256KR_Data {
 			_, err := jwt.Parse(sString, func(token *jwt.Token) (interface{}, error) {
-				if _, ok := token.Method.(*secp256k1.SigningMethodSecp256K1); !ok {
+				if _, ok := token.Method.(*secp256k1.SigningMethodSecp256k1); !ok {
 					return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 				}
 
@@ -73,7 +73,8 @@ func TestGeneration(t *testing.T) {
 	for i := 0; i < 128; i++ {
 
 		t.Run("ES256K/N="+fmt.Sprint(i), func(t *testing.T) {
-			token := jwt.NewWithClaims(secp256k1.SigningMethodES256K1, jwt.StandardClaims{
+			t.Parallel()
+			token := jwt.NewWithClaims(secp256k1.SigningMethodES256K, jwt.StandardClaims{
 				IssuedAt: int64(i),
 			})
 
@@ -83,7 +84,7 @@ func TestGeneration(t *testing.T) {
 			}
 
 			_, err = jwt.Parse(sString, func(token *jwt.Token) (interface{}, error) {
-				if _, ok := token.Method.(*secp256k1.SigningMethodSecp256K1); !ok {
+				if _, ok := token.Method.(*secp256k1.SigningMethodSecp256k1); !ok {
 					return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 				}
 
@@ -96,8 +97,8 @@ func TestGeneration(t *testing.T) {
 		})
 
 		t.Run("ES256K-R/N="+fmt.Sprint(i), func(t *testing.T) {
-
-			token := jwt.NewWithClaims(secp256k1.SigningMethodES256K1R, jwt.StandardClaims{
+			t.Parallel()
+			token := jwt.NewWithClaims(secp256k1.SigningMethodES256KR, jwt.StandardClaims{
 				IssuedAt: int64(i),
 			})
 
@@ -107,7 +108,7 @@ func TestGeneration(t *testing.T) {
 			}
 
 			_, err = jwt.Parse(sString, func(token *jwt.Token) (interface{}, error) {
-				if _, ok := token.Method.(*secp256k1.SigningMethodSecp256K1); !ok {
+				if _, ok := token.Method.(*secp256k1.SigningMethodSecp256k1); !ok {
 					return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 				}
 
