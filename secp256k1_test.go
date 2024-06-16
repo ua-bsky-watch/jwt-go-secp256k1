@@ -6,8 +6,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/dgrijalva/jwt-go"
-	secp256k1 "github.com/ureeves/jwt-go-secp256k1"
+	secp256k1 "bsky.watch/jwt-go-secp256k1"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func TestVerification(t *testing.T) {
@@ -74,8 +74,8 @@ func TestGeneration(t *testing.T) {
 
 		t.Run("ES256K/N="+fmt.Sprint(i), func(t *testing.T) {
 			t.Parallel()
-			token := jwt.NewWithClaims(secp256k1.SigningMethodES256K, jwt.StandardClaims{
-				IssuedAt: int64(i),
+			token := jwt.NewWithClaims(secp256k1.SigningMethodES256K, jwt.MapClaims{
+				"iat": int64(i),
 			})
 
 			sString, err := token.SignedString(key)
@@ -98,8 +98,8 @@ func TestGeneration(t *testing.T) {
 
 		t.Run("ES256K-R/N="+fmt.Sprint(i), func(t *testing.T) {
 			t.Parallel()
-			token := jwt.NewWithClaims(secp256k1.SigningMethodES256KR, jwt.StandardClaims{
-				IssuedAt: int64(i),
+			token := jwt.NewWithClaims(secp256k1.SigningMethodES256KR, jwt.MapClaims{
+				"iat": int64(i),
 			})
 
 			sString, err := token.SignedString(key)

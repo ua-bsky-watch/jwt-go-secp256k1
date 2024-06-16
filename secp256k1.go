@@ -12,8 +12,8 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/dgrijalva/jwt-go"
 	ecrypto "github.com/ethereum/go-ethereum/crypto"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // ES256K and ES256K-R algorithms. uPort uses SigningMethodES256KR.
@@ -76,7 +76,7 @@ var (
 //
 // Verify it is a secp256k1 key before passing, otherwise it will validate with
 // that type of key instead. This can be done using ethereum's crypto package.
-func (sm *SigningMethodSecp256k1) Verify(signingString, signature string, key interface{}) error {
+func (sm *SigningMethodSecp256k1) Verify(signingString string, sig []byte, key interface{}) error {
 	pub, ok := key.(*ecdsa.PublicKey)
 	if !ok {
 		return ErrWrongKeyFormat
@@ -88,10 +88,6 @@ func (sm *SigningMethodSecp256k1) Verify(signingString, signature string, key in
 	hasher := sm.hash.New()
 	hasher.Write([]byte(signingString))
 
-	sig, err := jwt.DecodeSegment(signature)
-	if err != nil {
-		return err
-	}
 	if len(sig) != sm.sigLen {
 		return ErrBadSignature
 	}
@@ -108,25 +104,25 @@ func (sm *SigningMethodSecp256k1) Verify(signingString, signature string, key in
 
 // Sign produces a secp256k1 signature for a JWT. The type of key has
 // to be *PrivateKey.
-func (sm *SigningMethodSecp256k1) Sign(signingString string, key interface{}) (string, error) {
+func (sm *SigningMethodSecp256k1) Sign(signingString string, key interface{}) ([]byte, error) {
 	prv, ok := key.(*ecdsa.PrivateKey)
 	if !ok {
-		return "", ErrWrongKeyFormat
+		return nil, ErrWrongKeyFormat
 	}
 
 	if !sm.hash.Available() {
-		return "", ErrHashUnavailable
+		return nil, ErrHashUnavailable
 	}
 	hasher := sm.hash.New()
 	hasher.Write([]byte(signingString))
 
 	sig, err := ecrypto.Sign(hasher.Sum(nil), prv)
 	if err != nil {
-		return "", ErrFailedSigning
+		return nil, ErrFailedSigning
 	}
 	out := sm.toOutSig(sig)
 
-	return jwt.EncodeSegment(out), nil
+	return out, nil
 }
 
 // Alg returns the algorithm name.
